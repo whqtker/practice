@@ -14,8 +14,3 @@ PySpark vs. Pandas 속도 비교
 
 ## polling_sse_ws
 Spring Boot를 통해 Polling, Long Polling, SSE, Websocket 구현
-
-## 문제
-- SseController: 제공해주신 코드 + '/sse'에 접근하면 sse.html이 로드되는 로직 -> /sse에 접근할 때 sse가 작동해야 함.
-- SseEmitters: 제공해주신 코드 동일
-- SseService: 
