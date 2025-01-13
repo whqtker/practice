@@ -7,12 +7,21 @@
     <script>
         function sse() {
             const eventSource = new EventSource('/sse/connect');
-            eventSource.onmessage = function(event) {
-                console.log(event.data);
-                console.log("==========");
-            };
+
+            // 연결 성공 이벤트 처리
+            eventSource.addEventListener('connect', function(event) {
+                console.log('연결 상태:', event.data);
+            });
+
+            // 새 데이터 수신 이벤트 처리
+            eventSource.addEventListener('newData', function(event) {
+                const data = JSON.parse(event.data);
+                console.log('새 메시지:', data.message);
+            });
+
+            // 에러 처리
             eventSource.onerror = function(error) {
-                console.error('Error:', error);
+                console.error('SSE 에러:', error);
             };
         }
 
@@ -21,9 +30,11 @@
     </script>
 </head>
 <body>
-<button onclick="location.href='/polling'">Polling</button>
-<button onclick="location.href='/longPolling'">Long Polling</button>
-<button onclick="location.href='/sse'">SSE</button>
-<button onclick="location.href='/websocket'">Websocket</button>
+    <div>
+        <button onclick="location.href='/polling'">Polling</button>
+        <button onclick="location.href='/longPolling'">Long Polling</button>
+        <button onclick="location.href='/sse'">SSE</button>
+        <button onclick="location.href='/websocket'">Websocket</button>
+    </div>
 </body>
 </html>
