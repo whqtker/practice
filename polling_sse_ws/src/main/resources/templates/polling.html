@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Polling Example</title>
+    <script>
+        function poll() {
+            console.log("데이터 준비되었나요?");
+            fetch('/polling/data')
+                .then(response => response.text())
+                .then(data => {
+                    console.log(data);
+                    console.log("==========");
+                })
+                .catch(error => console.error('Error:', error));
+        }
+
+        setInterval(poll, 500); // 0.5초마다 폴링
+    </script>
+</head>
+<body>
+<button onclick="location.href='/polling'">Polling</button>
+<button onclick="location.href='/longPolling'">Long Polling</button>
+<button onclick="location.href='/sse'">SSE</button>
+<button onclick="location.href='/websocket'">Websocket</button>
+</body>
+</html>
