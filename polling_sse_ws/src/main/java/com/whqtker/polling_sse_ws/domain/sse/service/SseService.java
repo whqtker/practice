@@ -16,27 +16,38 @@ public class SseService {
     private static final Logger logger = LoggerFactory.getLogger(SseService.class);
     private final Random random = new Random();
     private final SseEmitters sseEmitters;
+    private Thread sseThread;
+    private volatile boolean isRunning = false;
 
-    @PostConstruct
-    public void init() {
-        // 백그라운드 스레드에서 주기적으로 데이터 생성 및 전송
-        new Thread(() -> {
-            while (true) {
+    // SSE 시작 메서드
+    public synchronized void startSse() {
+        if (isRunning) return;
+        
+        isRunning = true;
+        sseThread = new Thread(() -> {
+            while (isRunning) {
                 try {
-                    // 0.5 ~ 1.5초 사이 랜덤 대기
+                    logger.info("데이터 생성 중...");
                     Thread.sleep(500 + random.nextInt(1000));
                     logger.info("데이터 생성 완료! 클라이언트에 전송해야지.");
-                    // 모든 클라이언트에게 데이터 전송
                     sseEmitters.noti("newData", Ut.mapOf(
                             "message", "새로운 데이터가 도착했습니다!"
                     ));
                     logger.info("==========");
-                    
                 } catch (InterruptedException e) {
                     Thread.currentThread().interrupt();
                     break;
                 }
             }
-        }).start();
+        });
+        sseThread.start();
+    }
+
+    // SSE 중지 메서드
+    public synchronized void stopSse() {
+        isRunning = false;
+        if (sseThread != null) {
+            sseThread.interrupt();
+        }
     }
 }

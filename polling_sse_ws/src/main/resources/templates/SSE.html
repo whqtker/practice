@@ -5,8 +5,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SSE Example</title>
     <script>
+        let eventSource;
+
         function sse() {
-            const eventSource = new EventSource('/sse/connect');
+            eventSource = new EventSource('/sse/connect');
 
             // 연결 성공 이벤트 처리
             eventSource.addEventListener('connect', function(event) {
@@ -24,6 +26,14 @@
                 console.error('SSE 에러:', error);
             };
         }
+
+        // 페이지를 떠날 때 SSE 연결 종료 및 서버에 알림
+        window.addEventListener('beforeunload', function() {
+            if (eventSource) {
+                eventSource.close();
+                fetch('/sse/disconnect', { method: 'POST' });
+            }
+        });
 
         // 페이지가 로드되면 sse 함수 실행
         window.onload = sse;

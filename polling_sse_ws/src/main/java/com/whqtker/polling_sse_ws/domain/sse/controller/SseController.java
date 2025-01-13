@@ -6,6 +6,7 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
@@ -18,10 +19,19 @@ import java.io.IOException;
 public class SseController {
     // SSE 연결들을 관리하는 컴포넌트
     private final SseEmitters sseEmitters;
+    private final SseService sseService;
 
     @GetMapping("")
     public String sse() {
+        sseService.startSse();  // SSE 시작
         return "sse";
+    }
+
+    @PostMapping("/disconnect")
+    @ResponseBody
+    public ResponseEntity<Void> disconnect() {
+        sseService.stopSse();
+        return ResponseEntity.ok().build();
     }
 
     // 클라이언트의 SSE 연결 요청을 처리하는 엔드포인트
