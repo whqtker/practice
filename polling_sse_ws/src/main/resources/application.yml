@@ -1,0 +1,7 @@
+spring:
+  application:
+    name: polling-sse-ws
+
+logging:
+  level:
+    com.whqtker.polling_sse_ws: DEBUG

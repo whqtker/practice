@@ -1,0 +1,405 @@
+<!DOCTYPE html>
+<html lang="ko">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WebSocket 양방향 통신 테스트</title>
+    <script src="https://cdn.jsdelivr.net/npm/sockjs-client@1/dist/sockjs.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/stompjs@2.3.3/lib/stomp.min.js"></script>
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            min-height: 100vh;
+            color: #eee;
+        }
+
+        h1 {
+            text-align: center;
+            color: #00d9ff;
+            margin-bottom: 10px;
+        }
+
+        .subtitle {
+            text-align: center;
+            color: #888;
+            margin-bottom: 30px;
+        }
+
+        .container {
+            display: flex;
+            gap: 20px;
+        }
+
+        .panel {
+            flex: 1;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 12px;
+            padding: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .panel h3 {
+            margin-top: 0;
+            padding-bottom: 10px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .client-panel h3 {
+            color: #4ec9b0;
+        }
+
+        .server-panel h3 {
+            color: #dcdcaa;
+        }
+
+        .message-area {
+            height: 350px;
+            overflow-y: auto;
+            background: #0d1117;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 15px;
+        }
+
+        .message {
+            padding: 10px 15px;
+            margin: 8px 0;
+            border-radius: 8px;
+            animation: fadeIn 0.3s ease;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .message.sent {
+            background: linear-gradient(135deg, #0e4d40 0%, #0a3a30 100%);
+            border-left: 4px solid #4ec9b0;
+        }
+
+        .message.received {
+            background: linear-gradient(135deg, #4a3f00 0%, #3a3000 100%);
+            border-left: 4px solid #dcdcaa;
+        }
+
+        .message-time {
+            font-size: 11px;
+            color: #888;
+        }
+
+        .message-content {
+            margin-top: 5px;
+            word-break: break-word;
+        }
+
+        .message-label {
+            font-size: 10px;
+            text-transform: uppercase;
+            font-weight: bold;
+            opacity: 0.7;
+        }
+
+        .controls {
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .status {
+            display: inline-block;
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-size: 12px;
+            margin-bottom: 15px;
+        }
+
+        .status.connected {
+            background: #1b4332;
+            color: #95d5b2;
+        }
+
+        .status.disconnected {
+            background: #4a1919;
+            color: #f48771;
+        }
+
+        button {
+            padding: 12px 24px;
+            margin: 5px;
+            font-size: 14px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+        }
+
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .btn-connect {
+            background: #2d6a4f;
+            color: white;
+        }
+
+        .btn-disconnect {
+            background: #9d0208;
+            color: white;
+        }
+
+        .input-group {
+            display: flex;
+            gap: 10px;
+        }
+
+        .input-group input {
+            flex: 1;
+            padding: 12px 15px;
+            border: none;
+            border-radius: 8px;
+            background: #1a1a2e;
+            color: white;
+            font-size: 14px;
+        }
+
+        .input-group button {
+            background: #0077b6;
+            color: white;
+        }
+
+        .flow-diagram {
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .flow-arrow {
+            display: inline-block;
+            padding: 8px 20px;
+            margin: 5px;
+            border-radius: 20px;
+            font-size: 12px;
+        }
+
+        .flow-arrow.outgoing {
+            background: #0e4d40;
+            color: #4ec9b0;
+        }
+
+        .flow-arrow.incoming {
+            background: #4a3f00;
+            color: #dcdcaa;
+        }
+
+        .flow-box {
+            display: inline-block;
+            padding: 15px 25px;
+            border-radius: 8px;
+            font-weight: bold;
+        }
+
+        .flow-box.client {
+            background: #4ec9b0;
+            color: #0d1117;
+        }
+
+        .flow-box.server {
+            background: #dcdcaa;
+            color: #0d1117;
+        }
+
+        .stomp-debug {
+            background: #0d1117;
+            border-radius: 8px;
+            padding: 15px;
+            margin-top: 20px;
+            font-family: 'Consolas', monospace;
+            font-size: 12px;
+            max-height: 150px;
+            overflow-y: auto;
+        }
+
+        .stomp-debug .frame {
+            color: #808080;
+            margin: 3px 0;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>🔌 WebSocket 양방향 통신</h1>
+    <p class="subtitle">STOMP over SockJS를 사용한 실시간 양방향 메시지 교환</p>
+
+    <div class="flow-diagram">
+        <span class="flow-box client">🖥️ Client</span>
+        <span style="font-size: 24px; color: #888; margin: 0 20px;">⇄</span>
+        <span class="flow-box server">🖧 Server</span>
+    </div>
+
+    <div class="controls">
+        <div id="status" class="status disconnected">⭕ 연결 안됨</div>
+        <br>
+        <button id="connectBtn" class="btn-connect" onclick="connect()">🔌 연결</button>
+        <button id="disconnectBtn" class="btn-disconnect" onclick="disconnect()" disabled>❌ 연결 해제</button>
+    </div>
+
+    <div class="container">
+        <div class="panel client-panel">
+            <h3>�️ Client</h3>
+            <div id="clientMessages" class="message-area"></div>
+            <div class="input-group">
+                <input type="text" id="messageInput" placeholder="메시지를 입력하세요..."
+                    onkeypress="if(event.key==='Enter') sendMessage()">
+                <button onclick="sendMessage()">전송</button>
+            </div>
+        </div>
+
+        <div class="panel server-panel">
+            <h3>� Server</h3>
+            <div id="serverMessages" class="message-area"></div>
+            <p style="font-size: 12px; color: #888;">
+                💡 Producer: GET /ws/producer/start
+            </p>
+        </div>
+    </div>
+
+    <div class="stomp-debug">
+        <strong style="color: #569cd6;">🔍 STOMP 프레임 로그</strong>
+        <div id="stompLog"></div>
+    </div>
+
+    <script>
+        let stompClient = null;
+        let messageCounter = 0;
+
+        function logStomp(frame) {
+            const log = document.getElementById('stompLog');
+            const entry = document.createElement('div');
+            entry.className = 'frame';
+            entry.textContent = `[${new Date().toLocaleTimeString()}] ${frame}`;
+            log.appendChild(entry);
+            log.scrollTop = log.scrollHeight;
+        }
+
+        function addMessage(container, content, type) {
+            const area = document.getElementById(container);
+            const msg = document.createElement('div');
+            msg.className = `message ${type}`;
+            msg.innerHTML = `
+                <div class="message-label">${type === 'sent' ? '📤 SENT' : '📥 RECEIVED'}</div>
+                <div class="message-time">${new Date().toLocaleTimeString()}</div>
+                <div class="message-content">${content}</div>
+            `;
+            area.appendChild(msg);
+            area.scrollTop = area.scrollHeight;
+        }
+
+        function updateStatus(connected) {
+            const status = document.getElementById('status');
+            if (connected) {
+                status.className = 'status connected';
+                status.textContent = '🟢 연결됨';
+            } else {
+                status.className = 'status disconnected';
+                status.textContent = '⭕ 연결 안됨';
+            }
+            document.getElementById('connectBtn').disabled = connected;
+            document.getElementById('disconnectBtn').disabled = !connected;
+        }
+
+        function connect() {
+            logStomp('Connecting to ws://localhost:8080/ws via SockJS...');
+
+            const socket = new SockJS('http://localhost:8080/ws');
+            stompClient = Stomp.over(socket);
+
+            // STOMP 디버그 로그 커스텀
+            stompClient.debug = function (str) {
+                if (str.includes('CONNECT') || str.includes('SUBSCRIBE') ||
+                    str.includes('SEND') || str.includes('MESSAGE')) {
+                    logStomp(str.substring(0, 100) + (str.length > 100 ? '...' : ''));
+                }
+            };
+
+            stompClient.connect({}, function (frame) {
+                logStomp('✅ CONNECTED: ' + frame);
+                updateStatus(true);
+
+                // 메시지 구독
+                stompClient.subscribe('/topic/messages', function (message) {
+                    logStomp('📩 MESSAGE received from /topic/messages');
+
+                    let content = message.body;
+                    // JSON 파싱 시도
+                    try {
+                        const json = JSON.parse(content);
+                        content = json.content || JSON.stringify(json);
+                    } catch (e) { }
+
+                    // 서버가 보냄 → Server 패널에 SENT
+                    addMessage('serverMessages', content, 'sent');
+                    // 클라이언트가 받음 → Client 패널에 RECEIVED
+                    addMessage('clientMessages', content, 'received');
+                });
+
+                logStomp('📡 SUBSCRIBED to /topic/messages');
+            }, function (error) {
+                logStomp('❌ Connection error: ' + error);
+                updateStatus(false);
+            });
+        }
+
+        function disconnect() {
+            if (stompClient !== null) {
+                stompClient.disconnect(function () {
+                    logStomp('🔌 DISCONNECTED');
+                });
+            }
+            updateStatus(false);
+        }
+
+        function sendMessage() {
+            const input = document.getElementById('messageInput');
+            const message = input.value.trim();
+
+            if (message && stompClient && stompClient.connected) {
+                messageCounter++;
+                const payload = message;
+
+                stompClient.send('/app/message', {}, payload);
+                logStomp(`📤 SEND to /app/message: "${payload}"`);
+                // 클라이언트가 보냄 → Client 패널에 SENT
+                addMessage('clientMessages', payload, 'sent');
+                // 서버가 받음 → Server 패널에 RECEIVED
+                addMessage('serverMessages', payload, 'received');
+                input.value = '';
+            }
+        }
+    </script>
+</body>
+
+</html>
