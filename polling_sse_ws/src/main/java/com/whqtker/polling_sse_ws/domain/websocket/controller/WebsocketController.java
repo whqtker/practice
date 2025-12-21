@@ -29,7 +29,6 @@ public class WebsocketController {
 
     @MessageMapping("/message")
     public void handleWebSocketMessage(String message) {
-        // 클라이언트로부터 메시지 수신만 하고 응답하지 않음
         log.info("클라이언트로부터 받은 메시지: {}", message);
     }
 }
